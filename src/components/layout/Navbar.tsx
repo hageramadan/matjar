@@ -263,7 +263,7 @@ export function Navbar() {
             >
               <Link href="/auth/login">
                 <User className="h-5 w-5" />
-               <span className="text-[14px] font-bold"> تسجيل دخول</span>
+               <span className="text-[14px] font-bold "> تسجيل دخول</span>
               </Link>
             </Button>
 
