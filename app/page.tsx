@@ -4,7 +4,7 @@ import { CategoriesDragDrop } from "@/components/home/CategoriesDragDrop";
 import { Hero } from "@/components/home/HeroCover";
 import { LatestProducts, } from "@/components/home/LatestProducts";
 import { Footer } from "@/components/layout/Footer";
-// import { ProductsGrid } from "@/components/products/ProductCard";
+
 
 
 export default function Home() {
@@ -16,7 +16,7 @@ export default function Home() {
    <BestProducts/>
    <AdsHome/>
    <BestProducts/>
-   {/* <Footer/> */}
+   <Footer />
    </div>
   );
 }

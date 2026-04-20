@@ -5,12 +5,12 @@ import { MdEmail, MdPhone, MdLocationOn } from "react-icons/md";
 
 export function Footer() {
   return (
-    <footer className="bg-muted/50 border-t mt-auto bg-[#112B40] text-white pt-5">
+    <footer className=" border-t mt-auto bg-[#112B40] text-white pt-5">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About */}
           <div>
-            <h3 className="text-[#23A6F0] text-[84px] font-bold text-lg mb-4">
+            <h3 className="text-[#23A6F0] text-[84px] font-bold mb-4">
               Logo
             </h3>
           </div>
