@@ -8,7 +8,72 @@
   }
 }
 
+/* app/globals.css */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+/* تحسين التمرير */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #23A6F0;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1a8fd0;
+}
+
+/* تحسين التركيز */
+*:focus {
+  outline: none;
+}
+
+/* تحسين الأزرار */
+button {
+  cursor: pointer;
+}
+
+/* تحسين الصور */
+img {
+  max-width: 100%;
+  height: auto;
+}
 
  @media (maxWidth: 640px){
 .custom-width-192{

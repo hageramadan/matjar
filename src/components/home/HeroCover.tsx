@@ -6,58 +6,82 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FaArrowLeft } from "react-icons/fa";
+
+// ============= واجهات البيانات =============
 interface Slide {
   id: number;
+  sub_title: string | null;
+  name: string;
+  description: string | null;
+  link: string | null;
   image: string;
-  title: string;
-  description: string;
-  buttonText: string;
-  buttonLink: string;
+  is_active: number;
 }
 
-const slides: Slide[] = [
-  {
-    id: 1,
-    image: "/images/hero-1.jpg",
-    title: "تجربة تقنية متكاملة",
-    description: "منتجات أصلية من أشهر العلامات التجارية مع ضمان وجودة تستحقها اكتشف أجهزة تجمع بين الأداء العالي والسعر المناسب مع عروض حصرية وتوصيل سريع.",
-    buttonText: "تسوق الآن",
-    buttonLink: "/products",
-  },
-  {
-    id: 2,
-    image: "/images/hero-2.png",
-    title: "تجربة تقنية متكاملة",
-    description: "منتجات أصلية من أشهر العلامات التجارية مع ضمان وجودة تستحقها اكتشف أجهزة تجمع بين الأداء العالي والسعر المناسب مع عروض حصرية وتوصيل سريع.",
-    buttonText: "تسوق الآن",
-    buttonLink: "/products",
-  },
-  {
-    id: 3,
-    image: "/images/hero-1.jpg",
-   title: "تجربة تقنية متكاملة",
-    description: "منتجات أصلية من أشهر العلامات التجارية مع ضمان وجودة تستحقها اكتشف أجهزة تجمع بين الأداء العالي والسعر المناسب مع عروض حصرية وتوصيل سريع.",
-    buttonText: "تسوق الآن",
-    buttonLink: "/products",
-  },
-];
+interface ApiResponse {
+  result: boolean;
+  errNum: number;
+  message: string;
+  data: {
+    sliders: Slide[];
+  };
+}
+
+const API_BASE_URL = 'https://alfareed.admin.t-carts.com';
 
 export function Hero() {
+  const [slides, setSlides] = useState<Slide[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // جلب السلايدر من API
+  useEffect(() => {
+    const fetchSliders = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await fetch(`${API_BASE_URL}/api/sliders`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data: ApiResponse = await response.json();
+        
+        if (data.errNum === 200 && data.result === true) {
+          // تصفية السلايدرات النشطة فقط
+          const activeSliders = data.data.sliders.filter(slider => slider.is_active === 1);
+          setSlides(activeSliders);
+        } else {
+          throw new Error(data.message || 'فشل في تحميل السلايدر');
+        }
+      } catch (err) {
+        console.error('Error fetching sliders:', err);
+        setError(err instanceof Error ? err.message : 'حدث خطأ في تحميل السلايدر');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSliders();
+  }, []);
 
   // Auto-play functionality
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    if (!isAutoPlaying || slides.length === 0) return;
     
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000); // Change slide every 5 seconds
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, slides.length]);
 
   const goToNextSlide = () => {
+    if (slides.length === 0) return;
     setIsAutoPlaying(false);
     setCurrentSlide((prev) => (prev + 1) % slides.length);
     // Resume auto-play after 10 seconds of inactivity
@@ -65,6 +89,7 @@ export function Hero() {
   };
 
   const goToPrevSlide = () => {
+    if (slides.length === 0) return;
     setIsAutoPlaying(false);
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
     // Resume auto-play after 10 seconds of inactivity
@@ -76,6 +101,25 @@ export function Hero() {
     setCurrentSlide(index);
     setTimeout(() => setIsAutoPlaying(true), 10000);
   };
+
+  // عرض حالة التحميل
+  if (isLoading) {
+    return (
+      <section className="relative w-full h-[70vh] overflow-hidden bg-gray-200">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-[#23A6F0] border-r-transparent"></div>
+            <p className="mt-4 text-gray-600">جاري تحميل السلايدر...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // في حالة الخطأ أو عدم وجود سلايدرات، لا نعرض أي شيء
+  if (error || slides.length === 0) {
+    return null;
+  }
 
   return (
     <section className="relative w-full h-[70vh] overflow-hidden bg-gray-900">
@@ -91,8 +135,8 @@ export function Hero() {
             {/* Background Image */}
             <div className="relative w-full h-full">
               <Image
-                src={slide.image}
-                alt={slide.title}
+                src={`${API_BASE_URL}${slide.image}`}
+                alt={slide.name}
                 fill
                 loading="eager"
                 className="object-cover"
@@ -105,66 +149,87 @@ export function Hero() {
             {/* Content */}
             <div className="absolute inset-0 z-20 flex items-center justify-center">
               <div className="container-custom text-center text-white gap-3">
+                {/* العنوان الفرعي (إذا كان موجوداً) */}
+                {/* {slide.sub_title && (
+                  <p className="text-sm md:text-lg lg:text-[20px] mb-2 text-[#FF995D] font-semibold animate-in fade-in slide-in-from-bottom-5 duration-700">
+                    {slide.sub_title}
+                  </p>
+                )} */}
+                
+                {/* الاسم الرئيسي */}
                 <h1 className="text-3xl md:text-5xl lg:text-[58px] font-bold mb-4 animate-in fade-in slide-in-from-bottom-5 duration-700">
-                  {slide.title}
+                  {slide.name}
                 </h1>
-                <p className="text-base md:text-lg lg:text-[20px] mb-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100">
-                  {slide.description}
-                </p>
-              <Button
-              asChild
-              className="animate-in text-[16px] font-bold fade-in slide-in-from-bottom-5 duration-700 delay-200 rounded-xl"
-              style={{ 
-                backgroundColor: '#23A6F0',
-                width: '177px',
-                height: '56px'
-              }}
-            >
-              <Link href={slide.buttonLink} className="flex items-center justify-center gap-2">
-                {slide.buttonText}
-                <FaArrowLeft  className="h-4 w-4" />
-              </Link>
-            </Button>
+                
+                {/* الوصف */}
+                {slide.description && (
+                  <p className="text-base md:text-lg lg:text-[20px] mb-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100">
+                    {slide.description}
+                  </p>
+                )}
+                
+                {/* زر التسوق */}
+                <Button
+                  asChild
+                  className="animate-in text-[16px] font-bold fade-in slide-in-from-bottom-5 duration-700 delay-200 rounded-xl"
+                  style={{ 
+                    backgroundColor: '#23A6F0',
+                    width: '177px',
+                    height: '56px'
+                  }}
+                >
+                  <Link 
+                    href={slide.link || "/products"} 
+                    className="flex items-center justify-center gap-2"
+                  >
+                    تسوق الآن
+                    <FaArrowLeft className="h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Navigation Arrows */}
-      <button
-        onClick={goToPrevSlide}
-        className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 z-30  hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300 hover:scale-110"
-        aria-label="Previous slide"
-      >
-        <ChevronLeft className="h-8 w-8 text-white" />
-      </button>
-
-      <button
-        onClick={goToNextSlide}
-        className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 z-30  hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300 hover:scale-110"
-        aria-label="Next slide"
-      >
-        <ChevronRight className="h-8 w-8 text-white" />
-      </button>
-
-      {/* Dots Navigation */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
-        {slides.map((_, index) => (
+      {/* Navigation Arrows - تظهر فقط إذا كان هناك أكثر من سلايد */}
+      {slides.length > 1 && (
+        <>
           <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`transition-all duration-300 rounded-full ${
-              index === currentSlide
-                ? "w-8 h-2 bg-[#23A6F0]"
-                : "w-2 h-2 bg-white/50 hover:bg-white/75"
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
+            onClick={goToPrevSlide}
+            className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 z-30 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300 hover:scale-110"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="h-8 w-8 text-white" />
+          </button>
 
-    
+          <button
+            onClick={goToNextSlide}
+            className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 z-30 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300 hover:scale-110"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="h-8 w-8 text-white" />
+          </button>
+        </>
+      )}
+
+      {/* Dots Navigation - تظهر فقط إذا كان هناك أكثر من سلايد */}
+      {slides.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`transition-all duration-300 rounded-full ${
+                index === currentSlide
+                  ? "w-8 h-2 bg-[#23A6F0]"
+                  : "w-2 h-2 bg-white/50 hover:bg-white/75"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
