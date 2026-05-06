@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, ShoppingCart, Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
+;
 
 interface ProductCardProps {
   id: string;
@@ -52,7 +52,7 @@ export function ProductCard({
     <div
       role="article"
       aria-labelledby={`product-name-${id}`}
-      className="group w-[155px] h-[240px] sm:w-[170px] sm:h-[240px] md:w-[308px] md:h-[386px] relative bg-white transition-all duration-300 hover:shadow-lg"
+      className="group w-full h-full sm:w-[170px] sm:h-[240px] md:w-[308px] md:h-[386px] relative bg-white transition-all duration-300 hover:shadow-lg"
       style={{
        
         borderRadius: '12px',
@@ -65,11 +65,11 @@ export function ProductCard({
       <Link href={href} className="block h-full" aria-label={`عرض تفاصيل ${name}`}>
         {/* Image Container */}
         <div 
-          className="relative w-[130px] h-[130px] sm:w-[140px] sm:h-[140px] md:w-[276px] md:h-[276px] mx-auto transition-colors duration-300"
+          className="relative  min-w-[130px] min-h-[130px] md:w-[276px] md:h-[276px] mx-auto transition-colors duration-300"
           style={{
            
             borderRadius: '8px',
-            margin: '0 16px'
+            // margin: '0 16px'
           }}
         >
           {/* Heart Icon - Top Left Corner (New) */}
@@ -88,7 +88,7 @@ export function ProductCard({
             alt={name}
             loading="eager"
             fill
-            className="object-contain p-4 transition-transform duration-300 group-hover:scale-105"
+            className="object-contain w-full md:p-4 transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
 
@@ -116,7 +116,7 @@ export function ProductCard({
               {/* Shopping Cart Icon - Add to Cart */}
               <button
                 onClick={handleAddToCart}
-                className="bg-white rounded-full p-2 shadow-lg hover:bg-[#23A6F0] transition-all duration-200 hover:scale-110"
+                className="bg-white md:block hidden rounded-full p-2 shadow-lg hover:bg-[#23A6F0] transition-all duration-200 hover:scale-110"
                 style={{ color: '#112B40' }}
                 aria-label="أضف إلى السلة"
               >
@@ -126,7 +126,8 @@ export function ProductCard({
               {/* Heart Icon - Add to Favorites (kept original) */}
               <button
                 onClick={handleFavoriteClick}
-                className="bg-white rounded-full p-2 shadow-lg hover:bg-[#23A6F0] transition-all duration-200 hover:scale-110"
+                className="bg-white rounded-full p-2 
+                shadow-lg hover:bg-[#23A6F0] transition-all duration-200 hover:scale-110"
                 style={{ color: isFavorite ? '#ef4444' : '#112B40' }}
                 aria-label="أضف إلى المفضلة"
               >

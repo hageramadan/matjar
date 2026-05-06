@@ -181,8 +181,8 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-[#23A6F0] to-[#195073]  py-12">
-        <div className="container-custom">
+      <div className="bg-gradient-to-r from-[#23A6F0] to-[#195073]  py-3 md:py-6">
+        <div className="container-custom text-center mt-4">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">جميع المنتجات</h1>
           <p className="text-white/90">
             اكتشف أحدث المنتجات والعروض الحصرية
@@ -190,14 +190,14 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <div className="container-custom py-8">
+      <div className="container-custom py-4 md:py-8">
       
 
         {/* Results Info */}
         <div className="flex justify-between items-center mb-6">
           <p className="text-gray-600">
             {filteredProducts.length > 0 ? (
-              <>عرض {filteredProducts.length} من {totalProducts} منتج</>
+              <span className="mb-5">عرض {filteredProducts.length} من {totalProducts} منتج</span>
             ) : (
               <>لا توجد منتجات</>
             )}
@@ -207,7 +207,7 @@ export default function ProductsPage() {
         {/* Products Grid */}
         {filteredProducts.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-5">
               {filteredProducts.map((product, index) => (
                 <div
                   key={product.id}
