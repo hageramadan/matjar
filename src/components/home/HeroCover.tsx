@@ -36,11 +36,13 @@ export function Hero() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // متغيرات للسحب باللمس
+  // متغيرات محسنة للسحب باللمس
   const touchStartX = useRef<number>(0);
-  const [dragProgress, setDragProgress] = useState(0); // 0 إلى 1 أو -1
+  const touchStartY = useRef<number>(0);
+  const [dragProgress, setDragProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isSwipingHorizontal = useRef<boolean>(false);
 
   // جلب السلايدر من API
   useEffect(() => {
@@ -105,49 +107,61 @@ export function Hero() {
     setTimeout(() => setIsAutoPlaying(true), 10000);
   };
 
-  // ============= دوال السحب المتقدم =============
+  // ============= دوال السحب المحسنة للموبايل =============
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
     setIsDragging(true);
     setIsAutoPlaying(false);
-    setDragProgress(0);
+    isSwipingHorizontal.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging || !containerRef.current) return;
     
     const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
     const diffX = currentX - touchStartX.current;
-    const containerWidth = containerRef.current.clientWidth;
+    const diffY = currentY - touchStartY.current;
     
-    // حساب نسبة السحب (من -1 إلى 1)
-    let progress = diffX / containerWidth;
-    // تحديد أقصى نسبة سحب (50% كحد أقصى)
-    progress = Math.min(Math.max(progress, -0.5), 0.5);
+    // تحديد الاتجاه - أفقي أم عمودي
+    if (!isSwipingHorizontal.current && Math.abs(diffX) > 5) {
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        isSwipingHorizontal.current = true;
+        e.preventDefault();
+      }
+    }
     
-    setDragProgress(progress);
+    if (isSwipingHorizontal.current) {
+      e.preventDefault();
+      const containerWidth = containerRef.current.clientWidth;
+      let progress = diffX / containerWidth;
+      // تحديد حدود السحب
+      progress = Math.min(Math.max(progress, -0.8), 0.8);
+      setDragProgress(progress);
+    }
   };
 
   const handleTouchEnd = () => {
     if (!isDragging) return;
     
-    const minSwipeDistance = 0.15; // 15% كحد أدنى للسحب
+    const minSwipeDistance = 0.15; // 15% عتبة السحب
     
-    if (Math.abs(dragProgress) > minSwipeDistance) {
-      // سحب لليسار (قيمة سالبة) -> السلايد التالي
+    if (Math.abs(dragProgress) > minSwipeDistance && isSwipingHorizontal.current) {
+      // سحب ناجح - تغيير الصورة فوراً
       if (dragProgress < 0) {
-        goToNextSlide();
-      } 
-      // سحب لليمين (قيمة موجبة) -> السلايد السابق
-      else if (dragProgress > 0) {
-        goToPrevSlide();
+        goToNextSlide(); // سحب لليسار -> التالي
+      } else if (dragProgress > 0) {
+        goToPrevSlide(); // سحب لليمين -> السابق
       }
     }
     
-    // إعادة تعيين القيم
+    // إعادة التعيين
     setIsDragging(false);
     setDragProgress(0);
     touchStartX.current = 0;
+    touchStartY.current = 0;
+    isSwipingHorizontal.current = false;
     
     // استئناف التشغيل التلقائي بعد 10 ثواني
     setTimeout(() => setIsAutoPlaying(true), 10000);
@@ -182,38 +196,21 @@ export function Hero() {
 
   return (
     <section className="relative w-full h-[70vh] overflow-hidden bg-gray-900">
-      {/* Slides Container */}
+      {/* Slides Container - سحب سلس مثل المعرض */}
       <div 
         ref={containerRef}
         className="relative w-full h-full overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ touchAction: 'pan-y pinch-zoom' }} // منع التداخل مع التمرير العمودي
+        style={{ 
+          touchAction: isDragging && isSwipingHorizontal.current ? 'none' : 'pan-y',
+        }}
       >
         <div className="relative w-full h-full">
-          {/* السلايد السابق (يظهر عند السحب لليمين) */}
+          {/* السلايد الحالي + السحب المباشر */}
           <div 
-            className="absolute inset-0 w-full h-full transition-transform duration-300 ease-out"
-            style={{
-              transform: `translateX(calc(-100% + ${dragProgress * 100}%))`,
-              zIndex: dragProgress > 0 ? 5 : 1,
-            }}
-          >
-            <div className="relative w-full h-full">
-              <Image
-                src={`${API_BASE_URL}${slides[getPrevIndex()].image}`}
-                alt={slides[getPrevIndex()].name}
-                fill
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-black/20" />
-            </div>
-          </div>
-
-          {/* السلايد الحالي */}
-          <div 
-            className="absolute inset-0 w-full h-full transition-transform duration-300 ease-out"
+            className="absolute inset-0 w-full h-full"
             style={{
               transform: `translateX(${dragProgress * 100}%)`,
               zIndex: 10,
@@ -264,12 +261,12 @@ export function Hero() {
             </div>
           </div>
 
-          {/* السلايد التالي (يظهر عند السحب لليسار) */}
+          {/* السلايد التالي - يظهر من اليمين عند السحب لليسار */}
           <div 
-            className="absolute inset-0 w-full h-full transition-transform duration-300 ease-out"
+            className="absolute inset-0 w-full h-full"
             style={{
-              transform: `translateX(calc(100% - ${Math.abs(dragProgress) * 100}%))`,
-              zIndex: dragProgress < 0 ? 5 : 1,
+              transform: `translateX(${dragProgress < 0 ? (100 + dragProgress * 100) : 100}%)`,
+              zIndex: dragProgress < 0 ? 15 : 5,
             }}
           >
             <div className="relative w-full h-full">
@@ -278,6 +275,27 @@ export function Hero() {
                 alt={slides[getNextIndex()].name}
                 fill
                 className="object-cover"
+                priority={false}
+              />
+              <div className="absolute inset-0 bg-black/20" />
+            </div>
+          </div>
+
+          {/* السلايد السابق - يظهر من اليسار عند السحب لليمين */}
+          <div 
+            className="absolute inset-0 w-full h-full"
+            style={{
+              transform: `translateX(${dragProgress > 0 ? (-100 + dragProgress * 100) : -100}%)`,
+              zIndex: dragProgress > 0 ? 15 : 5,
+            }}
+          >
+            <div className="relative w-full h-full">
+              <Image
+                src={`${API_BASE_URL}${slides[getPrevIndex()].image}`}
+                alt={slides[getPrevIndex()].name}
+                fill
+                className="object-cover"
+                priority={false}
               />
               <div className="absolute inset-0 bg-black/20" />
             </div>
@@ -285,25 +303,12 @@ export function Hero() {
         </div>
       </div>
 
-      {/* مؤشر السحب (اختياري - يظهر فقط أثناء السحب) */}
-      {isDragging && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none">
-          <div className="bg-black/50 rounded-full p-3 backdrop-blur-sm">
-            {dragProgress < 0 ? (
-              <ChevronRight className="h-8 w-8 text-white" />
-            ) : dragProgress > 0 ? (
-              <ChevronLeft className="h-8 w-8 text-white" />
-            ) : null}
-          </div>
-        </div>
-      )}
-
-      {/* Navigation Arrows */}
+      {/* Navigation Arrows - مخفية على الموبايل */}
       {slides.length > 1 && (
         <>
           <button
             onClick={goToPrevSlide}
-            className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 z-30 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300 hover:scale-110"
+            className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-30 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300 hover:scale-110 bg-black/20"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-8 w-8 text-white" />
@@ -311,7 +316,7 @@ export function Hero() {
 
           <button
             onClick={goToNextSlide}
-            className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 z-30 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300 hover:scale-110"
+            className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-30 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300 hover:scale-110 bg-black/20"
             aria-label="Next slide"
           >
             <ChevronRight className="h-8 w-8 text-white" />
