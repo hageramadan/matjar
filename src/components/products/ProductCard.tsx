@@ -116,7 +116,7 @@ export function ProductCard({
               {/* Shopping Cart Icon - Add to Cart */}
               <button
                 onClick={handleAddToCart}
-                className="bg-white md:block hidden rounded-full p-2 shadow-lg hover:bg-[#23A6F0] transition-all duration-200 hover:scale-110"
+                className="bg-white rounded-full p-2 shadow-lg hover:bg-[#23A6F0] transition-all duration-200 hover:scale-110"
                 style={{ color: '#112B40' }}
                 aria-label="أضف إلى السلة"
               >
@@ -126,7 +126,7 @@ export function ProductCard({
               {/* Heart Icon - Add to Favorites (kept original) */}
               <button
                 onClick={handleFavoriteClick}
-                className="bg-white rounded-full p-2 
+                className="bg-white  md:block hidden rounded-full p-2 
                 shadow-lg hover:bg-[#23A6F0] transition-all duration-200 hover:scale-110"
                 style={{ color: isFavorite ? '#ef4444' : '#112B40' }}
                 aria-label="أضف إلى المفضلة"

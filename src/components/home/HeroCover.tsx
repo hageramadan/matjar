@@ -38,9 +38,9 @@ export function Hero() {
   
   // متغيرات للسحب باللمس
   const touchStartX = useRef<number>(0);
-  const touchEndX = useRef<number>(0);
+  const [dragProgress, setDragProgress] = useState(0); // 0 إلى 1 أو -1
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // جلب السلايدر من API
   useEffect(() => {
@@ -58,7 +58,6 @@ export function Hero() {
         const data: ApiResponse = await response.json();
         
         if (data.errNum === 200 && data.result === true) {
-          // تصفية السلايدرات النشطة فقط
           const activeSliders = data.data.sliders.filter(slider => slider.is_active === 1);
           setSlides(activeSliders);
         } else {
@@ -106,45 +105,61 @@ export function Hero() {
     setTimeout(() => setIsAutoPlaying(true), 10000);
   };
 
-  // ============= دوال السحب باللمس للموبايل =============
+  // ============= دوال السحب المتقدم =============
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     setIsDragging(true);
     setIsAutoPlaying(false);
+    setDragProgress(0);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    touchEndX.current = e.touches[0].clientX;
-    const diff = touchEndX.current - touchStartX.current;
-    setDragOffset(diff);
+    if (!isDragging || !containerRef.current) return;
+    
+    const currentX = e.touches[0].clientX;
+    const diffX = currentX - touchStartX.current;
+    const containerWidth = containerRef.current.clientWidth;
+    
+    // حساب نسبة السحب (من -1 إلى 1)
+    let progress = diffX / containerWidth;
+    // تحديد أقصى نسبة سحب (50% كحد أقصى)
+    progress = Math.min(Math.max(progress, -0.5), 0.5);
+    
+    setDragProgress(progress);
   };
 
   const handleTouchEnd = () => {
     if (!isDragging) return;
     
-    const minSwipeDistance = 50; // أقل مسافة للسحب لتغيير السلايد
+    const minSwipeDistance = 0.15; // 15% كحد أدنى للسحب
     
-    if (touchStartX.current && touchEndX.current) {
-      const distance = touchEndX.current - touchStartX.current;
-      const isLeftSwipe = distance < -minSwipeDistance; // سحب لليسار -> السلايد التالي
-      const isRightSwipe = distance > minSwipeDistance; // سحب لليمين -> السلايد السابق
-      
-      if (isLeftSwipe) {
+    if (Math.abs(dragProgress) > minSwipeDistance) {
+      // سحب لليسار (قيمة سالبة) -> السلايد التالي
+      if (dragProgress < 0) {
         goToNextSlide();
-      } else if (isRightSwipe) {
+      } 
+      // سحب لليمين (قيمة موجبة) -> السلايد السابق
+      else if (dragProgress > 0) {
         goToPrevSlide();
       }
     }
     
     // إعادة تعيين القيم
     setIsDragging(false);
-    setDragOffset(0);
+    setDragProgress(0);
     touchStartX.current = 0;
-    touchEndX.current = 0;
     
     // استئناف التشغيل التلقائي بعد 10 ثواني
     setTimeout(() => setIsAutoPlaying(true), 10000);
+  };
+
+  // حساب مؤشرات السلايدات المجاورة
+  const getPrevIndex = () => {
+    return currentSlide === 0 ? slides.length - 1 : currentSlide - 1;
+  };
+
+  const getNextIndex = () => {
+    return (currentSlide + 1) % slides.length;
   };
 
   // عرض حالة التحميل
@@ -160,101 +175,130 @@ export function Hero() {
     );
   }
 
-  // في حالة الخطأ أو عدم وجود سلايدرات، لا نعرض أي شيء
+  // في حالة الخطأ أو عدم وجود سلايدرات
   if (error || slides.length === 0) {
     return null;
   }
 
   return (
     <section className="relative w-full h-[70vh] overflow-hidden bg-gray-900">
-      {/* Slides Container - مع إضافة أحداث اللمس */}
+      {/* Slides Container */}
       <div 
-        className="relative w-full h-full"
+        ref={containerRef}
+        className="relative w-full h-full overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'pan-y pinch-zoom' }} // منع التداخل مع التمرير العمودي
       >
-        {slides.map((slide, index) => {
-          // حساب التحويل الأفقي أثناء السحب
-          let transform = '';
-          if (isDragging && index === currentSlide) {
-            transform = `translateX(${dragOffset}px)`;
-          } else if (index === currentSlide) {
-            transform = 'translateX(0)';
-          } else if (index === currentSlide - 1 || (currentSlide === 0 && index === slides.length - 1)) {
-            transform = 'translateX(-100%)';
-          } else if (index === currentSlide + 1 || (currentSlide === slides.length - 1 && index === 0)) {
-            transform = 'translateX(100%)';
-          } else {
-            transform = 'translateX(100%)';
-          }
-          
-          return (
-            <div
-              key={slide.id}
-              className={`absolute inset-0 w-full h-full transition-all duration-300 ease-out ${
-                index === currentSlide ? "z-10" : "z-0"
-              }`}
-              style={{
-                transform: transform,
-                transition: isDragging ? 'none' : 'transform 0.3s ease-out'
-              }}
-            >
-              {/* Background Image */}
-              <div className="relative w-full h-full">
-                <Image
-                  src={`${API_BASE_URL}${slide.image}`}
-          alt={slide.name}
-                  fill
-                  loading="eager"
-                  className="object-cover"
-                  priority={index === 0}
-                />
-                {/* Dark Overlay */}
-                <div className="absolute inset-0 bg-black/20" />
-              </div>
+        <div className="relative w-full h-full">
+          {/* السلايد السابق (يظهر عند السحب لليمين) */}
+          <div 
+            className="absolute inset-0 w-full h-full transition-transform duration-300 ease-out"
+            style={{
+              transform: `translateX(calc(-100% + ${dragProgress * 100}%))`,
+              zIndex: dragProgress > 0 ? 5 : 1,
+            }}
+          >
+            <div className="relative w-full h-full">
+              <Image
+                src={`${API_BASE_URL}${slides[getPrevIndex()].image}`}
+                alt={slides[getPrevIndex()].name}
+                fill
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-black/20" />
+            </div>
+          </div>
 
-              {/* Content */}
-              <div className="absolute inset-0 z-20 flex items-center justify-center">
-                <div className="container-custom text-center text-white gap-3">
-                  {/* الاسم الرئيسي */}
-                  <h1 className="text-3xl md:text-5xl lg:text-[58px] font-bold mb-4 animate-in fade-in slide-in-from-bottom-5 duration-700">
-                    {slide.name}
-                  </h1>
-                  
-                  {/* الوصف */}
-                  {slide.description && (
-                    <p className="text-base md:text-lg lg:text-[20px] mb-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100">
-                      {slide.description}
-                    </p>
-                  )}
-                  
-                  {/* زر التسوق */}
-                  <Button
-                    asChild
-                    className="animate-in text-[16px] font-bold fade-in slide-in-from-bottom-5 duration-700 delay-200 rounded-xl"
-                    style={{ 
-                      backgroundColor: '#23A6F0',
-                      width: '177px',
-                      height: '56px'
-                    }}
+          {/* السلايد الحالي */}
+          <div 
+            className="absolute inset-0 w-full h-full transition-transform duration-300 ease-out"
+            style={{
+              transform: `translateX(${dragProgress * 100}%)`,
+              zIndex: 10,
+            }}
+          >
+            <div className="relative w-full h-full">
+              <Image
+                src={`${API_BASE_URL}${slides[currentSlide].image}`}
+                alt={slides[currentSlide].name}
+                fill
+                className="object-cover"
+                priority
+              />
+              <div className="absolute inset-0 bg-black/20" />
+            </div>
+
+            {/* Content */}
+            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+              <div className="container-custom text-center text-white gap-3 pointer-events-auto">
+                <h1 className="text-3xl md:text-5xl lg:text-[58px] font-bold mb-4 animate-in fade-in slide-in-from-bottom-5 duration-700">
+                  {slides[currentSlide].name}
+                </h1>
+                
+                {slides[currentSlide].description && (
+                  <p className="text-base md:text-lg lg:text-[20px] mb-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100">
+                    {slides[currentSlide].description}
+                  </p>
+                )}
+                
+                <Button
+                  asChild
+                  className="animate-in text-[16px] font-bold fade-in slide-in-from-bottom-5 duration-700 delay-200 rounded-xl"
+                  style={{ 
+                    backgroundColor: '#23A6F0',
+                    width: '177px',
+                    height: '56px'
+                  }}
+                >
+                  <Link 
+                    href={slides[currentSlide].link || "/products"} 
+                    className="flex items-center justify-center gap-2"
                   >
-                    <Link 
-                      href={slide.link || "/products"} 
-                      className="flex items-center justify-center gap-2"
-                    >
-                      تسوق الآن
-                      <FaArrowLeft className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
+                    تسوق الآن
+                    <FaArrowLeft className="h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
             </div>
-          );
-        })}
+          </div>
+
+          {/* السلايد التالي (يظهر عند السحب لليسار) */}
+          <div 
+            className="absolute inset-0 w-full h-full transition-transform duration-300 ease-out"
+            style={{
+              transform: `translateX(calc(100% - ${Math.abs(dragProgress) * 100}%))`,
+              zIndex: dragProgress < 0 ? 5 : 1,
+            }}
+          >
+            <div className="relative w-full h-full">
+              <Image
+                src={`${API_BASE_URL}${slides[getNextIndex()].image}`}
+                alt={slides[getNextIndex()].name}
+                fill
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-black/20" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Navigation Arrows - تظهر فقط إذا كان هناك أكثر من سلايد */}
+      {/* مؤشر السحب (اختياري - يظهر فقط أثناء السحب) */}
+      {isDragging && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none">
+          <div className="bg-black/50 rounded-full p-3 backdrop-blur-sm">
+            {dragProgress < 0 ? (
+              <ChevronRight className="h-8 w-8 text-white" />
+            ) : dragProgress > 0 ? (
+              <ChevronLeft className="h-8 w-8 text-white" />
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Arrows */}
       {slides.length > 1 && (
         <>
           <button
@@ -275,7 +319,7 @@ export function Hero() {
         </>
       )}
 
-      {/* Dots Navigation - تظهر فقط إذا كان هناك أكثر من سلايد */}
+      {/* Dots Navigation */}
       {slides.length > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
           {slides.map((_, index) => (
